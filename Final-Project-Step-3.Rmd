@@ -1,0 +1,297 @@
+---
+title: "Final Project - Video Game Sales vs. Critic Rating"
+author: "Leeper, Jonathan"
+date: "2024-05-27"
+output: pdf_document
+urlcolor: blue
+linkcolor: red
+---
+# Step 1: Introduction and Sources
+
+
+### Introduction:
+
+Are video games getting worse over time, while sales continue to trend upwards? This is a topic of debate for a lot of people, as video games sales are reaching a point where they are reaching the upwards of 20 million, there are determining factors that these figures are reaching that point but the quality of this area is not reaching the same type of impact. This can be a topic that someone is interested in due to the fact that they may feel a certain way, and how this can be shown in a way that hasn't been seen before. This can be considered a data science problem because it isn't possible to see every single score of every single game over every single year. Being able to contain these into a chart or graph can show exactly what is happening year after year.
+
+### Research Questions:
+
+
+1. What is the highest selling year?
+
+2. What is the average score of games for the highest seeling year?
+
+3. When was the last highest selling year?
+
+4. How often is this year overtaken? Does this continue to be (CURRENT YEAR)?
+
+5. When it comes to critic score, how has this been deemed similar in today's world?
+
+6. For reverse clarity, what years had the worst scoring games?
+
+7. If this is still (CURRENT YEAR), how can we determine what games should be considered within our lists?
+
+
+### Approach: 
+
+
+
+I was able to find 3 datasets that can help with the questions I have focused above, and how I believe they can be helpful to trying to answer these questions. The first dataset, vgchartz-2024, has the sheet sorted by total sales, with a helpful "Critic Score" and "release date" within their dataset. Using this sheet, I can sort these by release year, and trim out specific scores and sales that may not meet my target goal. However, some of these datsets are not sorted with all sources combined, which will need to be cleaned to meet my goal. Within vgsales, I can find the sales figures for games that do not have sales figures in vgchartz-2024. Albeit a few years out of date, most of the research will need to be done on Nintendo Games, where they do not have sales figures for them. For imdb_video_game_rating, I want to use this to compare to today's world. Using the "votes" heading, we can see how this is more useful to see how many votes for a specific score these games did get.
+
+### How This Fits:
+
+This can address this problem by being able to find exactly what scores when and how scores are sorted. In this data, being able to find sales figures for high scoring games and being able to cross-reference this correctly will be able to determine if sales have gone up without the scores doing the same, or if this is incorrect information.
+
+### Data:
+[Brannen, B., & Asaniczka. (2024, January 29). Video Game Sales 2024. Retrieved May 1, 2024.](https://www.kaggle.com/datasets/asaniczka/video-game-sales-2024) - This will be used for the bulk of the information - updated to this year can give us the most up-to-date information on sales, which is the most important out of the three.
+
+[GREGORYSMITH. (2019, September 19). Video Game Sales. Retrieved May 1, 2024.](https://www.kaggle.com/datasets/gregorut/videogamesales) - This data mainly gives us sales numbers for games that do not have them featured on the main dataset - from my research, mainly titles from Nintendo.
+
+[Nyagami, D. (2022, September 19). Video game ratings from imdb. Retrieved May 1, 2024.](https://www.kaggle.com/datasets/nyagami/video-game-ratings-from-imdb) - This gives us public opinion on the games, which features the amount of "votes" as well as the rating for the same games featured in previous sources.
+
+### Required Packages: 
+
+ggplot2 - required for using the histogram that I am wanting to use for this outcome.
+
+pastecs - for stat.desc, that will be able to show a specific value and information that will be needed for my own research and information.
+
+dlplyr - for useful sorting and mutation of the data sets.
+
+
+### Plots & Table Needs:
+
+Histogram 
+
+Q-Q Plot
+
+### Questions For Future Steps:
+
+What is the correct way to clean the data that I will be using? Also, how can I properly add this information into a plot, bar chart, or graph? I have ideas, such as being able to use graphs for "games that scored above average in every year", but I will need a way to be able to show those sales figures as well, unless I am willing to dive into a specific year for this information. I do have a lot of ways to go with this data and trying to reach the goal I have for the topic, and I am very excited to do my own research on these specific inquiries.
+\newpage
+
+# Step 2: Importing, Cleaning, & Merging
+
+### Importing
+```{r}
+data1 <- read.csv("D:\\Documents\\School Assignments\\DSC520\\vgchartz-2024.csv")
+data2 <- read.csv("D:\\Documents\\School Assignments\\DSC520\\vgsales.csv")
+data3 <- read.csv("D:\\Documents\\School Assignments\\DSC520\\imdb_video_game_rating.csv")
+```
+Importing the data into 3 separate dataframe's by using the read.csv function is the strongest way for me to be able to take a good look at the data we have introduced.
+
+
+### Cleaning
+```{r,warning=FALSE, message=FALSE}
+library(dplyr)
+data1 <- subset( data1, select = -c(img, console, genre, publisher, developer, na_sales,
+                                    jp_sales, pal_sales, other_sales, last_update) )
+data1 <- data1 %>%
+  group_by(title) %>%
+  summarise(critic_score = mean(critic_score, na.rm = TRUE),
+            total_sales = sum(total_sales, na.rm = TRUE),
+            release_date = min(release_date))
+data1 <- mutate(data1, release_year = as.integer(substring(release_date, 1, 4)))
+data1 <- select(data1, -release_date)
+
+data2 <- subset( data2, select = -c(Rank, Platform, Genre, Publisher, NA_Sales, EU_Sales,
+                                    JP_Sales, Other_Sales) )
+data2 <- data2 %>%
+  group_by(Name) %>%
+  summarise(Global_Sales = sum(Global_Sales, na.rm = TRUE),
+            Year = min(Year))
+
+data3 <- subset( data3, select = -c(X, genre, directors, plot) )
+data3$votes <- as.numeric(gsub(",", "", data3$votes))
+data3_unique <- unique(data3[, c("title", "year", "rating", "votes")])
+data3_unique$title <- trimws(data3_unique$title)
+```
+The first step I used to clean the data was to remove all of the unnecessary columns within the data sets That will not be used for my experiment. After that, I grouped the games that are released for multiple systems, averaged the critic score for all different console ports, took a sum of the total sales, and used the earliest release date for the game. This was to remove all duplicates but also by keeping their sales figures, as it was sorted by exact console port sale. I also removed the full date, as the information I want to cover is only featured per year, and actual release date is irrelevant.
+
+I then used data2 for filling in the gaps I have previously mentioned: mainly Nintendo Games were missing their sales, and by cross-referencing on VGChartz website, this is applying the correct amount per game.
+
+For data3, I had to convert votes to numeric and removed additional entries for games that would be considered a re-release.
+
+### Merging
+```{r}
+merged_df <- merge(data1, data2, by.x = "title", by.y = "Name", all.x = TRUE)
+merged_df$total_sales <- pmax(merged_df$total_sales, merged_df$Global_Sales,
+                              na.rm = TRUE)
+merged_df <- subset(merged_df, select = -c(Global_Sales))
+merged_df <- merged_df[order(-merged_df$total_sales), ]
+merged_df$year_released <- ifelse(is.na(merged_df$release_year), merged_df$Year,
+                                  merged_df$release_year)
+merged_df <- subset(merged_df, select = -c(release_year, Year))
+merged_df$title <- trimws(merged_df$title)
+merged_df$critic_score <- round(merged_df$critic_score, 1)
+merged_df <- merge(merged_df, data3_unique[, c("title", "year", "rating", "votes")],
+                   by.x = c("title", "year_released"), by.y = c("title", "year"),
+                   all.x = TRUE)
+merged_df <- merged_df[order(-merged_df$total_sales), ]
+merged_df <- merged_df %>% rename(imdb_rating = rating)
+```
+Merging the data into merged_df was taking the data from data2 and applying it to the same title in data1, and replacing if need be if those values were not apart of data1. I also made the release date into the release year, and if this was missing from data1, applied from data2. I then applied the imdb_rating and votes into the merged_df.
+
+\newpage
+
+### Final Data Set
+```{r}
+knitr::kable(merged_df[1:43, ], row.names = FALSE)
+summary(merged_df)
+```
+This table is showing off the games within the dataset, sorted by total_sales. Within the summary, we can see the length of the dataset is 39,798, which would be too much to show within this PDF, but plenty so to play around with the data. Showing off the first 43 rows, which I chose to do within this example, can show exactly what type of information will be available for me as I make my way through the data.
+
+Showing off the summary definitely is helpful with exactly what can be seen within the data, as well.
+
+### Information Not Self Evident:
+
+Within my final dataset, it is not exactly self evident on what years were producing the highest rated games. That is because this has not been modified other than sorting and merging the 3 datasets I was able to produce. It is sorted into highest selling, but it is hard to pick an exact year that the sales were the highest.
+There are also some issues with incomplete data - for example, tetris was able to correctly get the total sales, but the critic score is actually for the PSN release of Tetris in 2011, not the 1988 original release. This is an issue in my code and how I truncated the file to have an average for all releases of the same name, which did not take into account that there could be only 1 score. This is due to VGChartz not having critic scores on games before 1990. Also, A game like Duck Hunt not having a critic score is understandable, as that falls into place with the previous issue - no critic scores before 1990.
+
+### Different Ways to look at the Data:
+
+Without any modifying, and only merging and sorting, it is very interesting to look at the data that I was able to procure within merged_df. It is able to determine the release year, the critic score, the sales, and imdb rating and votes. This, in my opinion, is a great way to determine different outcomes - what games received the most votes, and why? Is it recency bias? We have the possibility of creating an "inflation" graph - if 2023 had 7 million votes, but 2022 had 5 million, we can try to work a way to make it so those 5 million votes count as 7 million, spread evenly through the data.
+
+We also can easily see that Wii Sports is the highest selling video game of all time, as the graph is currently sorted by total_sales. There is a small issue with this - As Wii Sports was a pack-in bundle for the Wii, which is also one of the highest selling consoles of all time, it's number gets inflated due to that. With this number being inflated, but the critic score being only 7.7, will 2006 have an unfair advantage against other years, because of how large of a chunk this game and this year will make the sales? It remains to be seen, and I think being able to look at the data with different graphs and charts will help us with our view.
+
+### Plans for the Data
+
+The issues I have from before is having me re-evaluate how exactly I wanted to look at the data - When it comes to games before 1990, should they be removed? Should the imdb_rating replace critic_score for those specific games? There is a lot of fun to be had with the dataframe that is at hand, and I am excited to take a look at what can be done. I plan to be able to sort the games by years and sales, as well as by years and critic score, and also combining them together. There are a lot of directions that can be taken when it comes to how I plan to use the data for my experiments.
+
+### Summarizing Data
+
+To go over my previous research questions, It will be very simple to actually use my data in the questions I have asked. Highest selling year just has to have the titles with the same year_released combined, Then finding the average for the critic score, imdb_rating, and votes. Comparing the numbers, we can determine when the last highest selling year was, and if it is on an upward trend, how can we determine the rating of specific years? Also, some of the data does need to be researched on. How should Wii Sports, for example, be handled? should all games that were once considered bundles with the console be removed, such as Duck Hunt & the NES? 
+
+### Plots & Tables
+
+Some of the plots and tables I want to try and focus on would be specifically plots that can display the data in an easy to understand way. This will most likely be bar graphs and histograms, with possible box plots.
+
+For tables, a summary table with the mean, median, standard deviation, and other overviews will be able to showcase what I could be looking for. There could also be correlation tables created, which will show the correlation between the variables I have within the dataset.
+
+### Machine Learning Techniques
+
+One of the machine learning techniques I found to be interesting for this assignment is to potentially replace the critic score of those without as an average with the games sold about the same as that year. For example, if Game 1 sold 2 Million in 2006, and rated an 8, and Game 2 Sold 2 Million in 2006, would it be fair to rate this as an 8 as well? This can be applied via machine learning to replace the missing values, but I would need to equate exactly how those should be rated before continuing with my data.
+
+### Questions
+
+The main questions I have now is how I should take the data to display what I am wanting to show, and what I am trying to learn from the data. I posed a lot of questions within this document, but I definitely have more that are needing to be addressed before I can confidently display the data with the answer to the question I am wanting to answer. For the questions featured within the assignment details, I think the strongest data reducer would be to take the games within a certain year, create a new variable with the amount of games within a certain year, and average the other variables. However, I would want to create a new dataset for this, as I would be eliminating entries.
+\newpage
+
+# Step 3: Approach With The Data
+
+### Introduction
+With the dataset we were given, the story we are trying to build to is to determine if games are getting worse with sales figures going in an upwards direction. Are sales figures just going through the roof in comparison with the actual critic score? Well, taking our data we can determine exactly what is going on each year, and how we can see the direction the gaming industry is heading.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+filtered_df <- merged_df %>%
+  filter(!is.na(critic_score), !is.na(total_sales), year_released <=2023)
+
+critic_data <- filtered_df %>%
+  group_by(year_released) %>%
+  summarise(
+    value = mean(critic_score, na.rm = TRUE),
+    variable = "Average Critic Score"
+  )
+
+sales_data <- filtered_df %>%
+  group_by(year_released) %>%
+  summarise(
+    value = sum(total_sales, na.rm = TRUE),
+    variable = "Total Sales"
+  )
+
+max_critic_score <- max(critic_data$value, na.rm = TRUE)
+max_total_sales <- max(sales_data$value, na.rm = TRUE)
+max_critic_years <- critic_data %>% filter(value == max_critic_score)
+max_sales_years <- sales_data %>% filter(value == max_total_sales)
+```
+Above, I have taken the data, removed value-less rows from critic and total sales, and removed years after 2023. I was able to aggregate the data by year for critic score and total sales. To add a little bit of an easier viewing experience with future graphs, I also added the maximum critic score year and the maximum total sale score year. With this information, we are able to plot a graph to showcase the dataset's information, split between critic score and total sales.
+
+We are also able to do this with the rest of the information, however, these were the two that were most valuable in our discussion and narrative.
+
+\newpage
+
+```{r}
+ggplot(critic_data, aes(x = factor(year_released), y = value, fill = variable)) +
+ geom_bar(stat = "identity") +
+  geom_point(data = max_critic_years, aes(y = value), color = "red", size = 3) +
+labs(
+    title = "Average Critic Score Each Year",
+    x = "Year Released",
+    y = "Critic Score",
+    fill = "Variable"
+  ) +
+  theme_minimal() +
+ theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ variable, scales = "free", ncol = 1) +
+  theme(legend.position = "none") 
+```
+Within this specific graph, we are able to see that the year with the highest average critic score is 2020, which is definitely not what I was expecting. This means that, although the years following 2020 are on the lower end, we were in one of the best year's of gaming according to critic's. However, to complete the story we are wanting to tell, we should showcase the same sales figures for each year.
+
+\newpage
+
+```{r}
+ggplot(sales_data, aes(x = factor(year_released), y = value, fill = variable)) +
+ geom_bar(stat = "identity") +
+  geom_point(data = max_sales_years, aes(y = value), color = "red", size = 3) +
+labs(
+    title = "Total Sales of Games Released Each Year",
+    x = "Year Released",
+    y = "Total Sales (in millions)",
+    fill = "Variable"
+  ) +
+  theme_minimal() +
+ theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ variable, scales = "free", ncol = 1) +
+  theme(legend.position = "none") 
+```
+
+There is some interesting information to be obtained from this. One, years past 2019 currently do not have sales figures through vgchartz internal system, which is where I originally obtained my data from, but that is fine. However, with figures up to 2018, It seems that total sales is in a decline. We do see a spike in 2013, which equates for Grand Theft Auto V, but consistently trends downward. To go off of our data, it seems that video games are getting better every year, but the sales figures aren't matching with that.
+
+There is a huge problem that need's to be addressed with this, don't worry. I will approach that as I reach the "Limitations" section of this project.
+
+
+### Problem I address
+The problem that I wanted to address was the current landscape of video games. As the years have gone by, many amazing video games are still being produced, but the issue is that it is possible that the sales figures have gone through the roof in comparison to what is actually being made. This is something that is referenced a lot in common media - with yearly sports games, military shooter games, and more shovelware being released, it is harder to find those games such as Grand Theft Auto V in 2013, which dominated the best selling lists for years on end. This is something I actually do not agree with, personally, but wanted to approach this information with data, and not off of speculation.
+
+### How Problem Was Addressed
+With the dataset's I was able to obtain, I wanted to see a video game, it's year released, it's critic score, and it's sales figures. Within my data, I was able to add in imdb user rating as well as it's amount of votes, which adds another layer onto exactly what could be considered when discussing the differences between the two. Taking those figures and applying them to a bar graph was one of the strongest ways to see how these are stacking up in comparison year after year.
+
+### Analysis
+This is a very interesting activity and outcome I was able to produce. We are able to determine 2020 has been the strongest year since 1978, critically, which is the first year of the dataset. We are also able to see that 1994 was an amazing year, as well as 2013. However, with 2020 being the only year to average over 8, it is by far the strongest year we've ever had.
+
+However, when it comes to total sales, we can see that 2008 was the strongest total sales years. Even without Wii Sports 82.77 million, It would still be top 5, with 2006, 2007, and 2009 on top of it. There does seem to be a large drop off after 2011, but I want to equate that to what I will address within the "Limitations" Section.
+
+Consumers also were the biggest purchasers during the financial crisis from 2007-2009 or so, which is also interesting, as the critic scores during that time were also some of the lowest we had seen. I doubt these have any implications, especially from incomplete data, but it's definitely an interesting topic.
+
+### Implications
+To the consumer, this dataset is amazing news - as new games are released, they are getting better. With 2020 being the strongest year so far, and 2021-2024 not being fully accessible in this capacity yet, it can only mean that games are getting better.
+
+### Limitations
+Now, for the largest issue with the dataset I was able to procure, and that is - missing data. According to the graphs given, no sales figures are given for games after 2018, and sales figures explode for half a decade 2007-2012 and dropping off. This is an issue, and is hard to come away with a true analysis of what is going on with my original question. If we have missing data for more than a decade after 2011, we are truly unable to get any type of conclusive evidence on how games are going.
+
+\newpage
+
+```{r}
+highest_selling_games <- merged_df %>%
+  group_by(year_released) %>%
+  filter(total_sales == max(total_sales, na.rm = TRUE), year_released >= 1981,
+         year_released <=2018) %>%
+  ungroup()
+
+ggplot(highest_selling_games, aes(x = year_released, y = total_sales)) +
+  geom_point(aes(color = critic_score), size = 3) +
+  labs(
+    title = "Total Sales of Highest Selling Game Each Year With Critic Score",
+    x = "Year Released",
+    y = "Total Sales (in millions)",
+    color = "Critic Rating"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+With the graph above we ARE able to determine that the highest selling games (barring 2008 and 2013, Wii Sports and Grand Theft Auto V) from every year are considered great games, but the sales figures are still going in a negative direction. With having missing data, it's hard to determine what the truth is from all of this, and the only thing we are truly able to determine is how the data and the critic sales are in comparison, and that 2020 is the best year so far with it possibly going up. However, this is going back to what I stated before - speculation, and the issues it can cause when you're trying to showcase a narrative with data.
+
+### Conclusion
+To conclude this research paper, I want to say that this was one of the most extremely enjoyable experiments I have ever personally put together. Although it would be useless to add them into this paper, there are so many things you can do with the data to see specific narratives and mess with specific scenarios. We are able to compare year by year the top selling games, the best critically acclaimed games, and games with high ratings using imdb and votes, which is so fun to see the most popular. For example, in the graph above, I saw 1985 with a bright blue point. What came out in 1985 and sold that much? "Super Mario Bros."! Being able to go back and discover this type of information in a way that has been modified and cleaned in my own ways has made me so excited for the future I can have within data science.
